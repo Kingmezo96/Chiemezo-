@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin | Kingmezo CMS</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body class="admin-body" data-page="admin">
+  <main class="admin-shell">
+    <section class="admin-login" data-login-panel>
+      <div>
+        <p class="admin-kicker">Kingmezo CMS</p>
+        <h1>Content Manager</h1>
+        <p>Sign in to manage homepage copy, blog posts, projects, media paths, and publishing details.</p>
+      </div>
+      <form class="admin-login-form" data-login-form>
+        <label>Email<input type="email" name="email" autocomplete="username" required></label>
+        <label>Password<input type="password" name="password" autocomplete="current-password" required></label>
+        <button type="submit">Login</button>
+        <p class="admin-status" data-login-status aria-live="polite"></p>
+      </form>
+    </section>
+
+    <section class="admin-app" data-admin-app hidden>
+      <aside class="admin-sidebar">
+        <a class="admin-logo" href="index.html">Kingmezo</a>
+        <nav class="admin-nav" aria-label="Admin sections">
+          <button class="active" data-admin-tab="overview" type="button">Overview</button>
+          <button data-admin-tab="pages" type="button">Home & Pages</button>
+          <button data-admin-tab="blog" type="button">Blog Posts</button>
+          <button data-admin-tab="projects" type="button">Projects</button>
+          <button data-admin-tab="media" type="button">Media</button>
+          <button data-admin-tab="settings" type="button">Settings</button>
+        </nav>
+        <button class="admin-logout" data-admin-logout type="button">Logout</button>
+      </aside>
+
+      <div class="admin-main">
+        <header class="admin-topbar">
+          <div>
+            <p class="admin-kicker">Admin Dashboard</p>
+            <h1 data-admin-title>Overview</h1>
+          </div>
+          <div class="admin-actions">
+            <a href="index.html" target="_blank" rel="noreferrer">View Site</a>
+            <button data-save-local type="button">Save</button>
+            <button data-sync-remote type="button">Sync Supabase</button>
+          </div>
+        </header>
+        <p class="admin-status global" data-admin-status aria-live="polite"></p>
+
+        <section class="admin-panel active" data-panel="overview"></section>
+        <section class="admin-panel" data-panel="pages"></section>
+        <section class="admin-panel" data-panel="blog"></section>
+        <section class="admin-panel" data-panel="projects"></section>
+        <section class="admin-panel" data-panel="media"></section>
+        <section class="admin-panel" data-panel="settings"></section>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.2/dist/umd/supabase.min.js"></script>
+  <script src="supabase-config.js?v=cms1"></script>
+  <script src="cms-data.js?v=cms1"></script>
+  <script src="cms-client.js?v=cms1"></script>
+  <script src="admin.js?v=cms1"></script>
+</body>
+</html>

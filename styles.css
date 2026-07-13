@@ -1681,6 +1681,22 @@ h1, h2, h3, h4, h5, h6 {
   .feature-card img, .hero-banner, .testimonial-image, .newsletter-img { height: 220px; }
 }
 
+.blog-detail-meta {
+  margin-top: 22px;
+  color: var(--muted);
+  font-size: clamp(.9rem, 1.2vw, 1rem);
+}
+
+.blog-detail-content {
+  color: var(--ink);
+  font-size: clamp(1.05rem, 1.7vw, 1.28rem);
+  line-height: 1.8;
+}
+
+.blog-detail-content p + p {
+  margin-top: 1.3em;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: .01ms !important;

@@ -344,17 +344,154 @@ function qsaFrom(root, selector) {
   return [...root.querySelectorAll(selector)];
 }
 
+function getCmsData() {
+  return window.KingmezoCMS?.getData?.() || window.KINGMEZO_DEFAULT_CMS || {};
+}
+
+function getCmsProjectCases() {
+  return getCmsData().projectCases || projectCases;
+}
+
+function getCmsBlogPosts() {
+  return (getCmsData().blogPosts || []).filter(post => post.status !== 'draft');
+}
+
+function escapeHTML(value = '') {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+
+function formatPostDate(date = '') {
+  if (!date) return '';
+  const parsed = new Date(`${date}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return date;
+  return parsed.toLocaleDateString('en', { month: 'long', day: '2-digit', year: 'numeric' });
+}
+
+function projectCategoryFilter(category = '') {
+  const value = category.toLowerCase();
+  if (value.includes('product')) return 'product-management';
+  if (value.includes('community')) return 'community-engagement';
+  if (value.includes('brand')) return 'branding-strategy';
+  return 'project-management';
+}
+
+function setImage(selector, src, alt) {
+  const image = qs(selector);
+  if (!image || !src) return;
+  image.src = src;
+  if (alt) image.alt = alt;
+}
+
+function refreshSplitText(element) {
+  if (!element) return;
+  element.dataset.originalText = element.textContent.trim();
+  element.dataset.splitDone = '';
+  splitIntoRevealLines(element, true);
+}
+
+function applyCmsPublicContent() {
+  const cmsData = getCmsData();
+  applyCmsHome(cmsData);
+  applyCmsBlogList(cmsData);
+  applyCmsProjectList(cmsData);
+  setupProjectDetailsPage();
+  setupBlogDetailPage();
+  applyRevealStagger();
+  updateScrollEffects();
+}
+
+function applyCmsHome(cmsData) {
+  if (document.body.dataset.page !== 'home') return;
+  const home = cmsData.pages?.home;
+  if (!home) return;
+
+  setText('.hero-note', home.heroNote);
+  setText('.location', home.heroLocation);
+  setText('.about-snapshot .compact-display', home.aboutTitle);
+  setText('.dark-cta .display', home.ctaTitle);
+  setImage('.feature-card img', home.featureImage, 'Featured community initiative');
+  setImage('.landing-hero-banner img', home.heroImage, 'Kingmezo community impact banner');
+
+  const heroTitle = qs('.split-hero .mega-title');
+  if (heroTitle && home.heroTitle) {
+    heroTitle.textContent = home.heroTitle;
+    refreshSplitText(heroTitle);
+  }
+}
+
+function applyCmsBlogList(cmsData) {
+  const posts = getCmsBlogPosts();
+  const blogPage = document.body.dataset.page === 'blog';
+  const homePage = document.body.dataset.page === 'home';
+  if (!blogPage && !homePage) return;
+
+  if (blogPage) {
+    const blog = cmsData.pages?.blog || {};
+    setText('.page-hero .mega-title', blog.heroTitle);
+    setText('.page-hero .lead', blog.heroBody);
+    setImage('.page-hero .hero-banner img', blog.heroImage, 'Community members gathered during development outreach');
+    refreshSplitText(qs('.page-hero .mega-title'));
+  }
+
+  const list = blogPage ? qs('.blog-ladder.full') : qs('.blog-ladder');
+  if (!list || !posts.length) return;
+  list.innerHTML = posts.slice(0, blogPage ? posts.length : 3).map(post => `
+    <article class="post-card reveal">
+      <img src="${escapeHTML(post.image)}" alt="${escapeHTML(post.title)}">
+      <div>
+        <p>${escapeHTML(formatPostDate(post.date))} | ${escapeHTML(post.readTime || '')}</p>
+        <h3>${escapeHTML(post.title)}</h3>
+        <a href="blog-detail.html?post=${encodeURIComponent(post.slug)}">See Details</a>
+      </div>
+    </article>
+  `).join('');
+}
+
+function applyCmsProjectList(cmsData) {
+  if (document.body.dataset.page !== 'project') return;
+  const page = cmsData.pages?.project || {};
+  const cases = getCmsProjectCases();
+
+  setText('.velisse-page-head .mega-title', page.heroTitle);
+  setText('.velisse-page-head .lead', page.heroBody);
+  setImage('.velisse-banner img', page.heroImage, 'Project portfolio banner');
+  refreshSplitText(qs('.velisse-page-head .mega-title'));
+
+  const grid = qs('.portfolio-grid');
+  if (!grid) return;
+  grid.innerHTML = Object.entries(cases).map(([slug, item]) => `
+    <article class="portfolio-tile" data-project-category="${projectCategoryFilter(item.category)}">
+      <a class="portfolio-thumb hover-img" href="project-details.html?project=${encodeURIComponent(slug)}" aria-label="View ${escapeHTML(item.title)} details">
+        <img src="${escapeHTML(item.thumb || item.banner)}" alt="${escapeHTML(item.title)}">
+        <span>View Details</span>
+      </a>
+      <div class="portfolio-info">
+        <h3><a href="project-details.html?project=${encodeURIComponent(slug)}">${escapeHTML(item.title)}</a></h3>
+        <p>${escapeHTML(item.category)}</p>
+      </div>
+    </article>
+  `).join('');
+  setupPortfolioFilters();
+}
+
 function setupPortfolioFilters() {
   const filters = qsa('.portfolio-filter button');
   const tiles = qsa('.portfolio-tile');
   if (!filters.length || !tiles.length) return;
 
   filters.forEach(button => {
+    if (button.dataset.filterReady) return;
+    button.dataset.filterReady = 'true';
     button.addEventListener('click', () => {
       const filter = button.dataset.projectFilter;
       filters.forEach(item => item.classList.toggle('active', item === button));
 
-      tiles.forEach(tile => {
+      qsa('.portfolio-tile').forEach(tile => {
         const visible = filter === 'all' || tile.dataset.projectCategory === filter;
         tile.hidden = !visible;
         tile.classList.toggle('is-hidden', !visible);
@@ -552,7 +689,9 @@ function setupProjectDetailsPage() {
 
   const params = new URLSearchParams(window.location.search);
   const key = params.get('project') || 'chaise';
-  const item = projectCases[key] || projectCases.chaise;
+  const cases = getCmsProjectCases();
+  const item = cases[key] || cases.chaise || Object.values(cases)[0];
+  if (!item) return;
 
   setText('[data-detail-title]', item.title);
   setText('[data-detail-tagline]', item.tagline);
@@ -594,8 +733,8 @@ function renderNumberedList(selector, items) {
   const list = qs(selector);
   if (!list) return;
 
-  list.innerHTML = items.map((item, index) => `
-    <li><span>/${String(index + 1).padStart(2, '0')}</span><p>${item}</p></li>
+  list.innerHTML = (items || []).map((item, index) => `
+    <li><span>/${String(index + 1).padStart(2, '0')}</span><p>${escapeHTML(item)}</p></li>
   `).join('');
 }
 
@@ -603,9 +742,9 @@ function renderGallery(item) {
   const gallery = qs('[data-detail-gallery]');
   if (!gallery) return;
 
-  gallery.innerHTML = item.gallery.map(src => `
+  gallery.innerHTML = (item.gallery || []).map(src => `
     <a href="${src}" class="case-gallery-item">
-      <img src="${src}" alt="${item.title} project image">
+      <img src="${escapeHTML(src)}" alt="${escapeHTML(item.title)} project image">
     </a>
   `).join('');
 }
@@ -613,26 +752,46 @@ function renderGallery(item) {
 function renderRelatedProjects(currentKey) {
   const related = qs('[data-related-projects]');
   if (!related) return;
+  const cases = getCmsProjectCases();
 
-  related.innerHTML = Object.entries(projectCases)
+  related.innerHTML = Object.entries(cases)
     .filter(([key]) => key !== currentKey)
     .slice(0, 3)
     .map(([key, item]) => `
       <article class="related-card">
         <a class="hover-img" href="project-details.html?project=${key}">
-          <img src="${item.thumb}" alt="${item.title}">
+          <img src="${escapeHTML(item.thumb || item.banner)}" alt="${escapeHTML(item.title)}">
         </a>
         <div>
-          <h3><a href="project-details.html?project=${key}">${item.title}</a></h3>
-          <p>${item.category}</p>
+          <h3><a href="project-details.html?project=${key}">${escapeHTML(item.title)}</a></h3>
+          <p>${escapeHTML(item.category)}</p>
           <a class="arrow-btn" href="project-details.html?project=${key}">View Details <span>-></span></a>
         </div>
       </article>
     `).join('');
 }
 
+function setupBlogDetailPage() {
+  const page = qs('[data-blog-detail-page]');
+  if (!page) return;
+
+  const params = new URLSearchParams(window.location.search);
+  const slug = params.get('post') || getCmsBlogPosts()[0]?.slug;
+  const post = getCmsBlogPosts().find(item => item.slug === slug) || getCmsBlogPosts()[0];
+  if (!post) return;
+
+  setText('[data-blog-title]', post.title);
+  setText('[data-blog-excerpt]', post.excerpt);
+  setText('[data-blog-meta]', `${formatPostDate(post.date)} | ${post.readTime || ''} | ${post.publisher || ''}`);
+  setImage('[data-blog-image]', post.image, post.title);
+  const body = qs('[data-blog-content]');
+  if (body) body.innerHTML = `<p>${escapeHTML(post.content || post.excerpt).replace(/\n{2,}/g, '</p><p>').replace(/\n/g, '<br>')}</p>`;
+  document.title = `${post.title} | Kingmezo Blog`;
+}
+
 setupPortfolioFilters();
 setupProjectDetailsPage();
+setupBlogDetailPage();
 
 qsa('.accordion').forEach((accordion, accordionIndex) => {
   qsaFrom(accordion, 'article').forEach((item, itemIndex) => {
@@ -721,3 +880,7 @@ qsa('form').forEach(form => {
 });
 
 updateScrollEffects();
+
+window.addEventListener('kingmezo:cms-ready', applyCmsPublicContent);
+window.addEventListener('kingmezo:cms-updated', applyCmsPublicContent);
+applyCmsPublicContent();
