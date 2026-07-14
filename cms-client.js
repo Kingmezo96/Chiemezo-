@@ -58,7 +58,8 @@
   function pageRowsToPages(rows) {
     const pages = clone(defaultData.pages || {});
     (rows || []).forEach(row => {
-      if (row.section === 'home.hero') {
+      const key = row.content_key || row.section;
+      if (key === 'home.hero') {
         pages.home = {
           ...(pages.home || {}),
           heroNote: row.body || pages.home?.heroNote,
@@ -67,10 +68,10 @@
           ...(row.meta || {})
         };
       }
-      if (row.section === 'home.about') pages.home = { ...(pages.home || {}), aboutTitle: row.title || pages.home?.aboutTitle };
-      if (row.section === 'home.cta') pages.home = { ...(pages.home || {}), ctaTitle: row.title || pages.home?.ctaTitle };
-      if (row.section === 'blog.hero') pages.blog = { ...(pages.blog || {}), heroTitle: row.title, heroBody: row.body, heroImage: row.image_url };
-      if (row.section === 'project.hero') pages.project = { ...(pages.project || {}), heroTitle: row.title, heroBody: row.body, heroImage: row.image_url };
+      if (key === 'home.about') pages.home = { ...(pages.home || {}), aboutTitle: row.title || pages.home?.aboutTitle };
+      if (key === 'home.cta') pages.home = { ...(pages.home || {}), ctaTitle: row.title || pages.home?.ctaTitle };
+      if (key === 'blog.hero') pages.blog = { ...(pages.blog || {}), heroTitle: row.title, heroBody: row.body, heroImage: row.image_url };
+      if (key === 'project.hero') pages.project = { ...(pages.project || {}), heroTitle: row.title, heroBody: row.body, heroImage: row.image_url };
     });
     return pages;
   }
@@ -148,11 +149,11 @@
     const blog = next.pages?.blog || {};
     const project = next.pages?.project || {};
     return [
-      { section: 'home.hero', title: home.heroTitle, body: home.heroNote, image_url: home.heroImage, meta: { heroLocation: home.heroLocation, featureImage: home.featureImage }, sort_order: 1 },
-      { section: 'home.about', title: home.aboutTitle, body: '', image_url: home.featureImage, meta: {}, sort_order: 2 },
-      { section: 'home.cta', title: home.ctaTitle, body: '', image_url: '', meta: {}, sort_order: 3 },
-      { section: 'blog.hero', title: blog.heroTitle, body: blog.heroBody, image_url: blog.heroImage, meta: {}, sort_order: 4 },
-      { section: 'project.hero', title: project.heroTitle, body: project.heroBody, image_url: project.heroImage, meta: {}, sort_order: 5 }
+      { content_key: 'home.hero', page: 'home', label: 'Homepage hero', title: home.heroTitle, body: home.heroNote, image_url: home.heroImage, meta: { heroLocation: home.heroLocation, featureImage: home.featureImage }, sort_order: 1, is_visible: true },
+      { content_key: 'home.about', page: 'home', label: 'Homepage about', title: home.aboutTitle, body: '', image_url: home.featureImage, meta: {}, sort_order: 2, is_visible: true },
+      { content_key: 'home.cta', page: 'home', label: 'Homepage CTA', title: home.ctaTitle, body: '', image_url: '', meta: {}, sort_order: 3, is_visible: true },
+      { content_key: 'blog.hero', page: 'blog', label: 'Blog hero', title: blog.heroTitle, body: blog.heroBody, image_url: blog.heroImage, meta: {}, sort_order: 4, is_visible: true },
+      { content_key: 'project.hero', page: 'project', label: 'Project hero', title: project.heroTitle, body: project.heroBody, image_url: project.heroImage, meta: {}, sort_order: 5, is_visible: true }
     ];
   }
 
@@ -195,7 +196,7 @@
     }
 
     const [contentResult, projectsResult, postsResult] = await Promise.all([
-      supabase.from('site_content').upsert(pagePayloadRows(next), { onConflict: 'section' }),
+      supabase.from('site_content').upsert(pagePayloadRows(next), { onConflict: 'content_key' }),
       supabase.from('projects').upsert(projectPayloadRows(next), { onConflict: 'slug' }),
       supabase.from('blog_posts').upsert(blogPayloadRows(next), { onConflict: 'slug' })
     ]);
