@@ -60,10 +60,13 @@
 
   function projectCategorySlug(category = '') {
     const value = category.toLowerCase();
-    if (value.includes('product')) return 'product-management';
-    if (value.includes('community')) return 'community-engagement';
-    if (value.includes('brand')) return 'branding-strategy';
-    return 'project-management';
+    if (value.includes('product')) return 'product';
+    if (value.includes('community')) return 'community';
+    if (value.includes('brand')) return 'branding';
+    if (value.includes('education') || value.includes('edubridge')) return 'education';
+    if (value.includes('digital') || value.includes('software')) return 'digital';
+    if (value.includes('advocacy') || value.includes('bully')) return 'advocacy';
+    return 'product';
   }
 
   function pageRowsToPages(rows) {
