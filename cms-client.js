@@ -1,5 +1,7 @@
 (function () {
   const STORAGE_KEY = 'kingmezo.cms.v1';
+  const CURRENT_ADMIN_EMAIL = 'Chibuzoogbonnaya01@gmail.com';
+  const OLD_ADMIN_EMAILS = ['shibuzo' + 'ogbunaya01@gmail.com'];
   const defaultData = window.KINGMEZO_DEFAULT_CMS || {};
 
   const clone = value => JSON.parse(JSON.stringify(value || {}));
@@ -30,7 +32,16 @@
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   }
 
-  let data = mergeDeep(defaultData, readLocal() || {});
+  function normalizeData(next) {
+    const normalized = mergeDeep(defaultData, next || {});
+    const adminEmail = normalized.settings?.adminEmail || '';
+    if (OLD_ADMIN_EMAILS.includes(adminEmail.toLowerCase())) {
+      normalized.settings.adminEmail = CURRENT_ADMIN_EMAIL;
+    }
+    return normalized;
+  }
+
+  let data = normalizeData(readLocal() || {});
   let remoteStatus = 'local';
   let client = null;
 
@@ -225,7 +236,7 @@
   }
 
   function setData(next) {
-    data = mergeDeep(defaultData, next);
+    data = normalizeData(next);
     writeLocal(data);
     notify();
     return data;

@@ -1,7 +1,7 @@
 window.KINGMEZO_DEFAULT_CMS = {
   settings: {
     brand: 'Kingmezo',
-    adminEmail: 'shibuzoogbunaya01@gmail.com',
+    adminEmail: 'Chibuzoogbonnaya01@gmail.com',
     adminPassword: '123456',
     contactEmail: 'ChibuzoObonna01@gmail.com',
     linkedin: 'https://www.linkedin.com/in/kingmezo/'
