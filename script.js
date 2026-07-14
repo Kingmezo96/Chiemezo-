@@ -367,7 +367,8 @@ function escapeHTML(value = '') {
 
 function formatPostDate(date = '') {
   if (!date) return '';
-  const parsed = new Date(`${date}T00:00:00`);
+  const normalizedDate = String(date).includes('T') ? date : `${date}T00:00:00`;
+  const parsed = new Date(normalizedDate);
   if (Number.isNaN(parsed.getTime())) return date;
   return parsed.toLocaleDateString('en', { month: 'long', day: '2-digit', year: 'numeric' });
 }
