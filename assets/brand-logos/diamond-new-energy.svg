@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 120" role="img" aria-labelledby="title">
+  <title id="title">Diamond New Energy</title>
+  <rect width="500" height="120" fill="none"/>
+  <path d="M62 22l38 38-38 38-38-38z" fill="none" stroke="#1f9d70" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M62 38l22 22-22 22-22-22z" fill="#f2c84b"/>
+  <text x="122" y="53" fill="#202020" font-family="Arial, Helvetica, sans-serif" font-size="31" font-weight="800">Diamond</text>
+  <text x="122" y="86" fill="#1f9d70" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="800">New Energy</text>
+</svg>

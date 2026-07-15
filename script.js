@@ -68,7 +68,7 @@ scrollTop?.addEventListener('click', () => {
 const splitTargets = new Set([
   ...qsa('.split-text'),
   ...qsa('.mega-title'),
-  ...qsa('.display').filter(title => !title.closest('.site-footer')),
+  ...qsa('.display').filter(title => !title.closest('.site-footer') && !title.classList.contains('no-split')),
 ]);
 splitTargets.forEach(title => splitIntoRevealLines(title));
 
@@ -195,9 +195,7 @@ function animateCount(el) {
   requestAnimationFrame(tick);
 }
 
-qsa('.service-row[data-preview]').forEach(row => {
-  row.style.setProperty('--preview-image', `url("${row.dataset.preview}")`);
-});
+setupServicePreview();
 
 function parallax() {
   if (prefersReducedMotion) return;
@@ -231,23 +229,65 @@ function updateServiceRows() {
   if (!rows.length) return;
 
   rows.forEach(row => {
-    if (prefersReducedMotion) {
-      row.style.setProperty('--service-progress', '1');
-      row.style.setProperty('--preview-opacity', '0');
-      row.classList.remove('scroll-focus');
-      return;
+    row.classList.remove('scroll-focus');
+    row.style.removeProperty('--service-progress');
+    row.style.removeProperty('--preview-opacity');
+  });
+}
+
+function setupServicePreview() {
+  const rows = qsa('.service-row[data-preview]');
+  if (!rows.length || !matchMedia('(pointer: fine)').matches || prefersReducedMotion) return;
+
+  const preview = document.createElement('div');
+  preview.className = 'service-preview-float';
+  preview.setAttribute('aria-hidden', 'true');
+  document.body.appendChild(preview);
+
+  let activeRow = null;
+  let targetX = 0;
+  let targetY = 0;
+  let currentX = 0;
+  let currentY = 0;
+  let raf = null;
+
+  const render = () => {
+    currentX += (targetX - currentX) * .22;
+    currentY += (targetY - currentY) * .22;
+    preview.style.setProperty('--service-preview-x', `${currentX}px`);
+    preview.style.setProperty('--service-preview-y', `${currentY}px`);
+
+    if (activeRow) {
+      raf = requestAnimationFrame(render);
+    } else {
+      raf = null;
     }
+  };
 
-    const rect = row.getBoundingClientRect();
-    const midpoint = rect.top + rect.height / 2;
-    const distance = Math.abs(midpoint - innerHeight * .52);
-    const range = Math.max(innerHeight * .44, 260);
-    const progress = Math.max(0, 1 - distance / range);
-    const eased = Math.pow(progress, .75);
+  const movePreview = event => {
+    targetX = event.clientX + 34;
+    targetY = event.clientY - 18;
+    if (!raf) {
+      currentX = targetX;
+      currentY = targetY;
+      raf = requestAnimationFrame(render);
+    }
+  };
 
-    row.style.setProperty('--service-progress', eased.toFixed(3));
-    row.style.setProperty('--preview-opacity', (eased * .72).toFixed(3));
-    row.classList.toggle('scroll-focus', eased > .58);
+  rows.forEach(row => {
+    row.addEventListener('mouseenter', event => {
+      activeRow = row;
+      preview.style.backgroundImage = `url("${row.dataset.preview}")`;
+      preview.classList.add('active');
+      movePreview(event);
+    });
+
+    row.addEventListener('mousemove', movePreview);
+
+    row.addEventListener('mouseleave', () => {
+      activeRow = null;
+      preview.classList.remove('active');
+    });
   });
 }
 
@@ -465,6 +505,22 @@ function applyCmsProjectList(cmsData) {
 
   const grid = qs('.portfolio-grid');
   if (!grid) return;
+  const entries = Object.entries(cases);
+  const filters = [
+    ['all', 'All Project'],
+    ['project-management', 'Project Management'],
+    ['product-management', 'Product Dev & Management'],
+    ['community-engagement', 'Community Engagement'],
+    ['branding-strategy', 'Branding & Strategy']
+  ];
+  const availableFilters = new Set(entries.map(([, item]) => projectCategoryFilter(item.category)));
+  const filterNav = qs('.portfolio-filter');
+  if (filterNav) {
+    filterNav.innerHTML = filters
+      .filter(([key]) => key === 'all' || availableFilters.has(key))
+      .map(([key, label], index) => `<button class="${index === 0 ? 'active' : ''}" data-project-filter="${key}" type="button">${label}</button>`)
+      .join('');
+  }
   grid.innerHTML = Object.entries(cases).map(([slug, item]) => `
     <article class="portfolio-tile" data-project-category="${projectCategoryFilter(item.category)}">
       <a class="portfolio-thumb hover-img" href="project-details.html?project=${encodeURIComponent(slug)}" aria-label="View ${escapeHTML(item.title)} details">
@@ -505,8 +561,8 @@ const projectCases = {
   edubridge: {
     title: 'EduBridge Initiative',
     tagline: 'An education support initiative connecting young people to learning tools, mentorship, and opportunity.',
-    banner: 'assets/chiemezo/project-team-planning.jpg',
-    thumb: 'assets/chiemezo/community-speaking.jpg',
+    banner: 'assets/drive-projects/edubridge-01.jpg',
+    thumb: 'assets/drive-projects/edubridge-02.jpg',
     summary: 'EduBridge is built to make educational access more practical, supported, and connected to real opportunity.',
     description: 'The initiative brings structure to education-focused support through planning, partner coordination, mentorship pathways, and delivery systems that help young people move from interest to action.',
     client: 'EduBridge',
@@ -520,10 +576,10 @@ const projectCases = {
       'Programs needed practical tracking, communication, and follow-through.'
     ],
     gallery: [
-      'assets/chiemezo/project-team-planning.jpg',
-      'assets/chiemezo/community-speaking.jpg',
-      'assets/chiemezo/project-leadership.jpg',
-      'assets/chiemezo/project-partners.jpg'
+      'assets/drive-projects/edubridge-01.jpg',
+      'assets/drive-projects/edubridge-02.jpg',
+      'assets/drive-projects/edubridge-03.jpg',
+      'assets/drive-projects/edubridge-04.jpg'
     ],
     resultTitle: 'A stronger project structure for education support, partner coordination, and youth opportunity.',
     results: [
@@ -532,41 +588,41 @@ const projectCases = {
       'Stronger alignment between community needs and educational support.'
     ]
   },
-  chaise: {
-    title: 'CHAISE',
-    tagline: "Africa's leading marketplace solution integrating freelancers and business owners together.",
-    banner: 'assets/portfolio/chaise-marketplace-screens.jpeg',
-    thumb: 'assets/portfolio/chaise-hero-phone.jpeg',
-    summary: 'CHAISE connects freelancers and business owners through a focused marketplace experience.',
-    description: 'A marketplace solution designed to make hiring, service discovery, and collaboration easier for African freelancers and business owners.',
-    client: 'CHAISE',
-    industry: 'Marketplace & Technology',
-    category: 'Product Dev & Management',
-    duration: 'Product Sprint',
-    challenge: 'The product needed to make trust, discovery, hiring, and project management feel simple for two very different user groups.',
+  'digital-literacy': {
+    title: 'Digital Literacy Program',
+    tagline: 'An EduBridge learning program helping young people build practical digital confidence.',
+    banner: 'assets/drive-projects/digital-literacy-01.jpg',
+    thumb: 'assets/drive-projects/digital-literacy-02.jpg',
+    summary: 'Digital Literacy Program supports young learners with access to practical technology exposure and guided learning.',
+    description: 'The program sits under EduBridge and focuses on helping students understand computers, digital tools, and learning pathways they can use beyond the classroom.',
+    client: 'EduBridge',
+    industry: 'Education & Digital Inclusion',
+    category: 'Project Management',
+    duration: 'Learning Cohort',
+    challenge: 'The program needed to make digital learning feel accessible, structured, and relevant for young learners.',
     painPoints: [
-      'Freelancers needed a clearer way to show expertise and access opportunities.',
-      'Business owners needed faster talent discovery and simpler hiring decisions.',
-      'The platform needed a product story that could scale across talent, projects, and service categories.'
+      'Learners needed guided exposure to computers and digital tools.',
+      'The program needed practical classroom coordination.',
+      'Digital inclusion work needed clear documentation and visual storytelling.'
     ],
     gallery: [
-      'assets/portfolio/chaise-marketplace-screens.jpeg',
-      'assets/portfolio/chaise-hero-phone.jpeg',
-      'assets/portfolio/chaise-product-flow.jpeg',
-      'assets/portfolio/chaise-business-screen.jpeg'
+      'assets/drive-projects/digital-literacy-01.jpg',
+      'assets/drive-projects/digital-literacy-02.jpg',
+      'assets/drive-projects/digital-literacy-04.jpg',
+      'assets/drive-projects/community-outreach-01.jpg'
     ],
-    resultTitle: 'A clearer product direction for a marketplace built around talent discovery, hiring, and service delivery.',
+    resultTitle: 'A clearer learning experience for digital skills, confidence, and classroom participation.',
     results: [
-      'Defined the marketplace positioning and product experience.',
-      'Clarified user journeys for freelancers and business owners.',
-      'Created a stronger visual product story for future rollout.'
+      'Supported structured digital literacy sessions.',
+      'Improved documentation for learning activities.',
+      'Connected EduBridge goals to practical digital inclusion outcomes.'
     ]
   },
   'big-smile': {
     title: 'Big Smile Initiative',
     tagline: 'A community care initiative creating moments of support, inclusion, and joy for children and families.',
-    banner: 'assets/chiemezo/community-children.jpg',
-    thumb: 'assets/projects/big-smile-endo.jpg',
+    banner: 'assets/drive-projects/big-smile-endo-03.jpg',
+    thumb: 'assets/drive-projects/big-smile-endo-01.jpg',
     summary: 'Big Smile Initiative brings direct support and human attention to children and families through outreach-led engagement.',
     description: 'The work focuses on dignity, access, and care by bringing people, resources, and local coordination together around practical community needs.',
     client: 'Big Smile Initiative',
@@ -580,10 +636,9 @@ const projectCases = {
       'The project needed to preserve dignity while delivering visible care.'
     ],
     gallery: [
-      'assets/chiemezo/community-children.jpg',
-      'assets/projects/big-smile-endo.jpg',
-      'assets/chiemezo/community-child.jpg',
-      'assets/chiemezo/community-gathering.jpg'
+      'assets/drive-projects/big-smile-endo-03.jpg',
+      'assets/drive-projects/big-smile-endo-01.jpg',
+      'assets/drive-projects/big-smile-endo-02.jpg'
     ],
     resultTitle: 'A more organized community care experience centered on children, families, and human dignity.',
     results: [
@@ -593,10 +648,10 @@ const projectCases = {
     ]
   },
   'dont-bully-me': {
-    title: "Don't Bully Me Initiative",
+    title: "Don't Bully Me Campaign",
     tagline: 'A safer learning spaces initiative promoting empathy, confidence, and protection from bullying.',
-    banner: 'assets/chiemezo/community-lineup.jpg',
-    thumb: 'assets/chiemezo/community-portrait.jpg',
+    banner: 'assets/drive-projects/dont-bully-me-02.jpg',
+    thumb: 'assets/drive-projects/dont-bully-me-04.jpg',
     summary: "Don't Bully Me helps young people understand safety, empathy, confidence, and respect in learning environments.",
     description: 'The initiative is designed for school and youth-centered engagement, combining awareness, conversation, and practical community participation.',
     client: "Don't Bully Me",
@@ -610,16 +665,76 @@ const projectCases = {
       'The program needed simple activities that schools and communities could understand.'
     ],
     gallery: [
-      'assets/chiemezo/community-lineup.jpg',
-      'assets/chiemezo/community-gathering.jpg',
-      'assets/chiemezo/community-portrait.jpg',
-      'assets/chiemezo/community-culture.jpg'
+      'assets/drive-projects/dont-bully-me-02.jpg',
+      'assets/drive-projects/dont-bully-me-04.jpg',
+      'assets/drive-projects/dont-bully-me-01.jpg',
+      'assets/drive-projects/dont-bully-me-03.jpg'
     ],
     resultTitle: 'A clearer awareness initiative for safer learning spaces and more empathetic youth engagement.',
     results: [
       'Shaped the initiative around safety, empathy, and confidence.',
       'Created a stronger community-facing message.',
       'Improved the structure for school and youth participation.'
+    ]
+  },
+  'community-outreach': {
+    title: 'Community Outreach',
+    tagline: 'Community-focused learning and support activities designed around practical local needs.',
+    banner: 'assets/drive-projects/community-outreach-02.jpg',
+    thumb: 'assets/drive-projects/community-outreach-02.jpg',
+    summary: 'Community Outreach brings targeted support, learning moments, and local engagement into spaces where young people can be reached directly.',
+    description: 'The work focuses on practical engagement with children and young people, using organized sessions, partner support, and clear communication to meet community needs.',
+    client: 'Reves African Foundation',
+    industry: 'Community Development',
+    category: 'Community Engagement',
+    duration: 'Outreach Cycle',
+    challenge: 'The outreach work needed to stay warm and personal while still being organized enough for documentation, partners, and future planning.',
+    painPoints: [
+      'Community activities needed clear coordination and follow-up.',
+      'The visuals needed to reflect real people and local presence.',
+      'The work needed to connect learning support with practical outreach.'
+    ],
+    gallery: [
+      'assets/drive-projects/community-outreach-02.jpg',
+      'assets/drive-projects/community-outreach-01.jpg'
+    ],
+    resultTitle: 'A more grounded outreach story that connects learning, care, and local engagement.',
+    results: [
+      'Organized community-facing activity documentation.',
+      'Used relevant Drive images for the correct outreach context.',
+      'Improved the distinction between outreach, campaigns, and education programs.'
+    ]
+  },
+  'boys-champions-strategy': {
+    title: 'Boys Champions Strategy',
+    tagline: 'A visual strategy and brand document system created for a youth advocacy organization.',
+    banner: 'assets/portfolio/boys-champions-strategy.jpeg',
+    thumb: 'assets/portfolio/boys-champions-strategy.jpeg',
+    summary: 'Boys Champions Strategy is presented here as branding work: a structured visual system for an advocacy organization, not the advocacy project itself.',
+    description: 'The work shaped the organization strategy document into a clear, credible, and visually consistent brand asset. The design direction uses strong editorial layouts, blue campaign tones, photography, and clean information hierarchy to make the organization story easier to understand and present.',
+    client: 'Boys Champions',
+    industry: 'Advocacy Organization',
+    category: 'Branding & Strategy',
+    duration: 'Brand Document Sprint',
+    challenge: 'The organization needed a strategy document that could communicate its mission, programs, and long-term direction with clarity and visual trust.',
+    painPoints: [
+      'The advocacy message needed a stronger visual structure for partners and stakeholders.',
+      'The document had to organize dense strategy content without feeling heavy.',
+      'The identity needed to feel purposeful, credible, and easy to recognize across pages.'
+    ],
+    gallery: [
+      'assets/portfolio/boys-champions-strategy.jpeg',
+      'assets/portfolio/boys-champions-strategy-cover.jpeg',
+      'assets/portfolio/boys-champions-executive-summary.jpeg',
+      'assets/portfolio/boys-champions-vision-mission.jpeg',
+      'assets/portfolio/boys-champions-problem-statement.jpeg',
+      'assets/portfolio/boys-champions-delivery-plan.jpeg'
+    ],
+    resultTitle: 'A polished brand and strategy document system for presenting Boys Champions with clarity and confidence.',
+    results: [
+      'Created a cohesive visual direction for the organization strategy document.',
+      'Improved hierarchy across cover, executive summary, mission, and program pages.',
+      'Built a presentation-ready brand asset for stakeholder communication.'
     ]
   },
   kuepass: {
@@ -689,9 +804,9 @@ function setupProjectDetailsPage() {
   if (!page) return;
 
   const params = new URLSearchParams(window.location.search);
-  const key = params.get('project') || 'chaise';
+  const key = params.get('project') || 'edubridge';
   const cases = getCmsProjectCases();
-  const item = cases[key] || cases.chaise || Object.values(cases)[0];
+  const item = cases[key] || cases.edubridge || Object.values(cases)[0];
   if (!item) return;
 
   setText('[data-detail-title]', item.title);
